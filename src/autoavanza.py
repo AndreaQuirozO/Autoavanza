@@ -53,9 +53,11 @@ def get_file_hash(file):
     return hashlib.md5(file.getbuffer()).hexdigest()
 
 # Streamlit interface
-st.title("Autoavanza")
+col1, col2, col3 = st.columns([1, 2, 1])
+with col2:
+    st.markdown("# 🚗 Autoavanza 🚗")
 
-st.subheader("Clasificación de Documentos")
+st.markdown("## ⬆️ Carga de Documentos")
 
 # Upload zip file
 uploaded_file = st.file_uploader("Subir un archivo ZIP que contenga los documentos en PDF", type="zip")
