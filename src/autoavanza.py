@@ -110,7 +110,7 @@ if uploaded_file is not None:
             continue  # Skip this document if the file does not exist
 
         # Use a container to hold the document, classification options, and download button
-        with st.container():
+        with st.expander(f"{predicted_type}", expanded=True):
 
             # Show PDF viewer inside the container
             if os.path.exists(current_filename):
@@ -155,12 +155,11 @@ if uploaded_file is not None:
 
                 # Use st.columns to layout the button next to the document
                 cols = st.columns([3, 1])
-                with cols[1]:  # Second column to place the download button
+                with cols[0]:  # Second column to place the download button
                     st.download_button(
                         label="⬇️ Descargar",
                         data=PDFbyte,
-                        file_name=current_filename,
+                        file_name=predicted_type,
                         mime="application/pdf",
                         key=f"download_{idx}"
                     )
-
