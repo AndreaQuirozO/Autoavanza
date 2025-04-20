@@ -12,14 +12,14 @@ import OCR
 import DocumentClassification
 
 display_order = [
-        "FACTURA",
-        "FACTURA_REVERSO",
-        "INE",
-        "INE_REVERSO",
-        "TARJETA_CIRCULACION",
-        "TARJETA_CIRCULACION_REVERSO",
-        "REVISAR"
-        ]
+    "FACTURA",
+    "FACTURA_REVERSO",
+    "INE",
+    "INE_REVERSO",
+    "TARJETA_CIRCULACION",
+    "TARJETA_CIRCULACION_REVERSO",
+    "REVISAR"
+]
 
 def decompress_zip(zip_file):
     root_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
@@ -35,32 +35,26 @@ def decompress_zip(zip_file):
     return output_dir
 
 def process_and_classify(directory):
-    classified_documents = []
+    classified_documents = {}
     for folder in os.listdir(directory):
         if folder not in ['.DS_Store', '__MACOSX']:
             for filename in os.listdir(os.path.join(directory, folder)):
                 if filename.endswith(".pdf") and filename != '.DS_Store':
                     pdf_path = os.path.join(directory, folder, filename)
                     image_path = OCR.convert_pdf_to_image(pdf_path)
-
                     results = OCR.image_to_text(image_path)
-
                     new_file_name, document = DocumentClassification.classify_document(results, image_path)
-
                     os.rename(pdf_path, new_file_name)
                     os.remove(image_path)
-
-                    classified_documents.append((document, new_file_name))
-    
+                    classified_documents[os.path.basename(new_file_name)] = {"type": document, "filename": new_file_name}
     return classified_documents
 
 def get_file_hash(file):
     return hashlib.md5(file.getbuffer()).hexdigest()
 
-# Streamlit interface x
+# Streamlit interface
 st.title("Autoavanza")
 
-st.container()
 st.subheader("Clasificación de Documentos")
 
 # Upload zip file
@@ -69,97 +63,77 @@ uploaded_file = st.file_uploader("Subir un archivo ZIP que contenga los document
 if uploaded_file is not None:
     file_hash = get_file_hash(uploaded_file)
 
-    # Check if it's a new upload
     if st.session_state.get("last_file_hash") != file_hash:
         st.session_state.last_file_hash = file_hash
-
-        # Clean, unzip, and classify
         directory = decompress_zip(uploaded_file)
         st.success(f"Archivos decomprimidos correctamente")
+        st.session_state.classified_documents_data = process_and_classify(directory)
 
-        st.session_state.classified_documents = process_and_classify(directory)
-    
-    # Get the already-processed documents from session state
-    classified_documents = st.session_state.get("classified_documents", [])
+    classified_documents_data = st.session_state.get("classified_documents_data", {})
 
-    # Sort and display
-    sorted_documents = sorted(
-        classified_documents,
-        key=lambda x: display_order.index(x[0]) if x[0] in display_order else len(display_order)
-    )
+    if classified_documents_data:
+        # Convert to a list for sorting and display
+        classified_documents_list = list(classified_documents_data.items())
 
-    # Document types
-    document_types = [
-        "FACTURA", "FACTURA_REVERSO", "INE", "INE_REVERSO",
-        "TARJETA_CIRCULACION", "TARJETA_CIRCULACION_REVERSO", "REVISAR"
-    ]
+        def sort_key(item):
+            return display_order.index(item[1]["type"]) if item[1]["type"] in display_order else len(display_order)
 
-    # Ensure sorted_documents is up-to-date
-    sorted_documents = [doc for doc in sorted_documents if os.path.exists(doc[1])]  # Only include documents that exist
+        sorted_documents_list = sorted(classified_documents_list, key=sort_key)
 
-    st.markdown("## 📄 Revisar y Confirmar Clasificación")
+        st.markdown("## 📄 Revisar y Confirmar Clasificación")
 
-    # Loop over each classified document and show them in the specified order
-    for idx, (predicted_type, filename) in enumerate(sorted_documents):
-        current_filename = filename
-        current_type = predicted_type
+        document_types = [
+            "FACTURA", "FACTURA_REVERSO", "INE", "INE_REVERSO",
+            "TARJETA_CIRCULACION", "TARJETA_CIRCULACION_REVERSO", "REVISAR"
+        ]
 
-        # Check if the file exists before processing it
-        if not os.path.exists(current_filename):
-            st.error(f"No se encontró el archivo: {current_filename}")
-            continue  # Skip this document if the file does not exist
+        updated_documents_data = {}
 
-        # Use a container to hold the document, classification options, and download button
-        with st.expander(f"{predicted_type}", expanded=True):
+        for item_key, doc_info in sorted_documents_list:
+            current_filename = doc_info["filename"]
+            current_type = doc_info["type"]
+            base_filename = os.path.basename(current_filename)
 
-            # Show PDF viewer inside the container
-            if os.path.exists(current_filename):
-                pdf_viewer(current_filename)
-            else:
+            if not os.path.exists(current_filename):
                 st.error(f"No se encontró el archivo: {current_filename}")
-                continue  # Skip to the next document
+                continue
 
-            # Dropdown to allow manual classification
-            selected_type = st.selectbox(
-                "Tipo de documento:",
-                options=document_types,
-                index=document_types.index(current_type),
-                key=f"select_{idx}"
-            )
-
-            # Save changes button
-            if st.button("💾 Guardar Cambios", key=f"save_{idx}"):
-                if selected_type != current_type:
-                    # Create the new filename after renaming
-                    new_filename = current_filename.replace(current_type, selected_type)
-
-                    # Rename the file in the filesystem
-                    os.rename(current_filename, new_filename)
-
-                    st.success(f"Archivo renombrado a: {new_filename}")
-
-                    # Update references after renaming
-                    current_filename = new_filename
-                    current_type = selected_type
-
-                    # Update document list and session state
-                    sorted_documents[idx] = (current_type, current_filename)
-                    st.session_state.classified_documents[idx] = (current_type, current_filename)
+            with st.expander(f"{current_type}", expanded=False):
+                if os.path.exists(current_filename):
+                    pdf_viewer(current_filename)
                 else:
-                    st.info("No se realizaron cambios.")
+                    st.error(f"No se encontró el archivo: {current_filename}")
+                    continue
 
-            # Download button inside the same container
-            if os.path.exists(current_filename):
-                with open(current_filename, "rb") as pdf_file:
-                    PDFbyte = pdf_file.read()
+                selected_type = st.selectbox(
+                    "Tipo de documento:",
+                    options=document_types,
+                    index=document_types.index(current_type),
+                    key=f"select_{base_filename}"  # Use a stable key
+                )
 
-                # Use st.columns to layout the button next to the document
-                cols = st.columns([3, 1])
-                with cols[0]:  # Second column to place the download button
+                if st.button("💾 Guardar Cambios", key=f"save_{base_filename}"):
+                    if selected_type != current_type:
+                        new_filename = os.path.join(os.path.dirname(current_filename), base_filename.replace(current_type, selected_type))
+                        os.rename(current_filename, new_filename)
+                        st.success(f"Archivo renombrado a: {os.path.basename(new_filename)}")
+                        updated_documents_data[item_key] = {"type": selected_type, "filename": new_filename}
+                    else:
+                        updated_documents_data[item_key] = {"type": current_type, "filename": current_filename}
+                        st.info("No se realizaron cambios.")
+                else:
+                    updated_documents_data[item_key] = {"type": current_type, "filename": current_filename}
+
+                if os.path.exists(current_filename):
+                    with open(current_filename, "rb") as pdf_file:
+                        PDFbyte = pdf_file.read()
                     st.download_button(
                         label="⬇️ Descargar",
                         data=PDFbyte,
-                        file_name=predicted_type,
+                        file_name=os.path.basename(current_filename),
                         mime="application/pdf",
-                        key=f"download_{idx}"
+                        key=f"download_{base_filename}"
                     )
+
+        # Update the session state with the potentially renamed files
+        st.session_state.classified_documents_data.update(updated_documents_data)
