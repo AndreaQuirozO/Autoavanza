@@ -5,6 +5,9 @@ import pandas as pd
 from functools import partial
 import shutil
 import hashlib
+import base64
+from streamlit_pdf_viewer import pdf_viewer
+
 import OCR
 import DocumentClassification
 
@@ -85,20 +88,79 @@ if uploaded_file is not None:
         key=lambda x: display_order.index(x[0]) if x[0] in display_order else len(display_order)
     )
 
-    st.markdown("## 📄 Documentos Clasificados")
-    for document, filename in sorted_documents:
-        with st.container():
-            cols = st.columns([4, 2])
-        with cols[0]:
-            st.markdown(f"**📁 {document}**")
-        with cols[1]:
-            with open(filename, "rb") as pdf_file:
-                PDFbyte = pdf_file.read()
+    # Document types
+    document_types = [
+        "FACTURA", "FACTURA_REVERSO", "INE", "INE_REVERSO",
+        "TARJETA_CIRCULACION", "TARJETA_CIRCULACION_REVERSO", "REVISAR"
+    ]
 
-            st.download_button(
-                label="⬇️ Descargar",
-                data=PDFbyte,
-                file_name=document,
-                mime="application/pdf",
-                key=f"download_{document}_{filename}"
+    # Ensure sorted_documents is up-to-date
+    sorted_documents = [doc for doc in sorted_documents if os.path.exists(doc[1])]  # Only include documents that exist
+
+    st.markdown("## 📄 Revisar y Confirmar Clasificación")
+
+    # Loop over each classified document and show them in the specified order
+    for idx, (predicted_type, filename) in enumerate(sorted_documents):
+        current_filename = filename
+        current_type = predicted_type
+
+        # Check if the file exists before processing it
+        if not os.path.exists(current_filename):
+            st.error(f"No se encontró el archivo: {current_filename}")
+            continue  # Skip this document if the file does not exist
+
+        # Use a container to hold the document, classification options, and download button
+        with st.container():
+
+            # Show PDF viewer inside the container
+            if os.path.exists(current_filename):
+                pdf_viewer(current_filename)
+            else:
+                st.error(f"No se encontró el archivo: {current_filename}")
+                continue  # Skip to the next document
+
+            # Dropdown to allow manual classification
+            selected_type = st.selectbox(
+                "Tipo de documento:",
+                options=document_types,
+                index=document_types.index(current_type),
+                key=f"select_{idx}"
             )
+
+            # Save changes button
+            if st.button("💾 Guardar Cambios", key=f"save_{idx}"):
+                if selected_type != current_type:
+                    # Create the new filename after renaming
+                    new_filename = current_filename.replace(current_type, selected_type)
+
+                    # Rename the file in the filesystem
+                    os.rename(current_filename, new_filename)
+
+                    st.success(f"Archivo renombrado a: {new_filename}")
+
+                    # Update references after renaming
+                    current_filename = new_filename
+                    current_type = selected_type
+
+                    # Update document list and session state
+                    sorted_documents[idx] = (current_type, current_filename)
+                    st.session_state.classified_documents[idx] = (current_type, current_filename)
+                else:
+                    st.info("No se realizaron cambios.")
+
+            # Download button inside the same container
+            if os.path.exists(current_filename):
+                with open(current_filename, "rb") as pdf_file:
+                    PDFbyte = pdf_file.read()
+
+                # Use st.columns to layout the button next to the document
+                cols = st.columns([3, 1])
+                with cols[1]:  # Second column to place the download button
+                    st.download_button(
+                        label="⬇️ Descargar",
+                        data=PDFbyte,
+                        file_name=current_filename,
+                        mime="application/pdf",
+                        key=f"download_{idx}"
+                    )
+
