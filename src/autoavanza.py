@@ -10,6 +10,8 @@ from streamlit_pdf_viewer import pdf_viewer
 
 from OCR import DataExtractor
 from DocumentClassification import DocumentClassifier
+from Staging import Staging
+from QRExctraction import CFDIValidator
 
 display_order = [
     "FACTURA",
@@ -22,17 +24,13 @@ display_order = [
 ]
 
 def decompress_zip(zip_file):
-    root_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
-    output_dir = os.path.join(root_dir, "temp", "archivos")
-
-    if os.path.exists(output_dir):
-        shutil.rmtree(output_dir)
-    os.makedirs(output_dir, exist_ok=True)
+    staging = Staging("archivos")
+    staging_path = staging.run()
 
     with zipfile.ZipFile(zip_file, 'r') as zip_ref:
-        zip_ref.extractall(output_dir)
+        zip_ref.extractall(staging_path)
 
-    return output_dir
+    return staging_path
 
 def process_and_classify(directory):
     classified_documents = {}
@@ -141,3 +139,60 @@ if uploaded_file is not None:
 
         # Update the session state with the potentially renamed files
         st.session_state.classified_documents_data.update(updated_documents_data)
+        
+        if st.button("✅ Apruebo Clasificación", key="aprobacion_clasificacion"):
+            factura_file = None
+            for doc_info in st.session_state.classified_documents_data.values():
+                if doc_info["type"] == "FACTURA":
+                    factura_file = doc_info["filename"]
+                    break
+
+            if factura_file and os.path.exists(factura_file):
+                validator = CFDIValidator(factura_file)
+                urls = validator.extract_url_from_qr()
+
+                if urls:
+                    st.success("QR code found.")
+                    validator.open_browser(urls[0])
+
+                    captcha_path = validator.save_captcha_image_for_streamlit()
+
+                    if os.path.exists(captcha_path):
+                        st.session_state.validator = validator
+                        st.session_state.captcha_path = captcha_path
+                        st.session_state.captcha_attempts = 0
+
+            else:
+                st.error("⚠️ No se encontró ningún archivo clasificado como FACTURA.")
+
+
+    if "validator" in st.session_state and "captcha_path" in st.session_state:
+        with st.form(key="captcha_form"):
+            st.image(st.session_state.captcha_path, caption="Ingrese el código CAPTCHA")
+            
+            input_key = f"captcha_input_{st.session_state.captcha_attempts}"
+            user_code = st.text_input("Código CAPTCHA", key=input_key)
+
+            if st.form_submit_button("🔐 Validar Código"):
+                st.session_state.captcha_attempts += 1
+                data = st.session_state.validator.extract_data_with_code(user_code)
+
+                if data:
+                    st.success("✅ Datos extraídos correctamente:")
+                    st.json(data)
+                    st.session_state.validator.close_browser()
+                    for key in ["captcha_attempts", "validator", "captcha_path"]:
+                        del st.session_state[key]
+                else:
+                    if st.session_state.captcha_attempts < 3:
+                        st.warning(f"Intento {st.session_state.captcha_attempts}/3 fallido. Intenta nuevamente.")
+                        new_path = st.session_state.validator.save_captcha_image_for_streamlit()
+                        st.session_state.captcha_path = new_path
+                        st.rerun()
+                    else:
+                        st.error("❌ Se alcanzó el número máximo de intentos.")
+                        st.session_state.validator.close_browser()
+                        for key in ["captcha_attempts", "validator", "captcha_path"]:
+                            del st.session_state[key]
+
+
