@@ -48,21 +48,25 @@ class CFDIValidator:
 
     def extract_url_from_qr(self):
         """
-        Extracts valid URLs from a QR code found in the image.
+        Extracts valid URLs from a QR code found in the image,
+        specifically checking for SAT verification links.
 
         Returns:
-            list: List of URLs extracted from the QR code.
+            list: List of SAT verification URLs extracted from the QR code.
         """
         image = cv2.imread(self.image_path)
         gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
         qr_codes = decode(gray, symbols=[ZBarSymbol.QRCODE])
 
+        sat_base_url = "https://verificacfdi.facturaelectronica.sat.gob.mx"
         urls = []
+
         for qr_code in qr_codes:
             data = qr_code.data.decode('utf-8')
-            if data.startswith('http://') or data.startswith('https://'):
+            if data.startswith(sat_base_url):
                 urls.append(data)
-        os.remove(self.image_path)  # Delete the image after extracting the QR
+
+        os.remove(self.image_path)  # Delete image after processing
         return urls
 
 
