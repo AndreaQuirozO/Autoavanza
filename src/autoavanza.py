@@ -8,16 +8,16 @@ import hashlib
 import base64
 from streamlit_pdf_viewer import pdf_viewer
 
-import OCR
-import DocumentClassification
+from OCR import DataExtractor
+from DocumentClassification import DocumentClassifier
 
 display_order = [
     "FACTURA",
-    "FACTURA_REVERSO",
+    "FACTURA REVERSO",
     "INE",
-    "INE_REVERSO",
-    "TARJETA_CIRCULACION",
-    "TARJETA_CIRCULACION_REVERSO",
+    "INE REVERSO",
+    "TARJETA CIRCULACION",
+    "TARJETA CIRCULACION REVERSO",
     "REVISAR"
 ]
 
@@ -41,9 +41,11 @@ def process_and_classify(directory):
             for filename in os.listdir(os.path.join(directory, folder)):
                 if filename.endswith(".pdf") and filename != '.DS_Store':
                     pdf_path = os.path.join(directory, folder, filename)
-                    image_path = OCR.convert_pdf_to_image(pdf_path)
-                    results = OCR.image_to_text(image_path)
-                    new_file_name, document = DocumentClassification.classify_document(results, image_path)
+                    data_extractor = DataExtractor()
+                    image_path = data_extractor.convert_pdf_to_image(pdf_path)
+                    results = data_extractor.image_to_text(image_path)
+                    document_classifier = DocumentClassifier(image_path, results)
+                    new_file_name, document = document_classifier.classify()
                     os.rename(pdf_path, new_file_name)
                     os.remove(image_path)
                     classified_documents[os.path.basename(new_file_name)] = {"type": document, "filename": new_file_name}
@@ -85,8 +87,8 @@ if uploaded_file is not None:
         st.markdown("## 📄 Revisar y Confirmar Clasificación")
 
         document_types = [
-            "FACTURA", "FACTURA_REVERSO", "INE", "INE_REVERSO",
-            "TARJETA_CIRCULACION", "TARJETA_CIRCULACION_REVERSO", "REVISAR"
+            "FACTURA", "FACTURA REVERSO", "INE", "INE REVERSO",
+            "TARJETA CIRCULACION", "TARJETA CIRCULACION REVERSO", "REVISAR"
         ]
 
         updated_documents_data = {}
