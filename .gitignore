@@ -12,3 +12,6 @@ temp/archivos/__MACOSX/
 
 # Ignore __pycache__ folders anywhere
 **/__pycache__/
+
+# Ignore confidential files
+.env
