@@ -36,93 +36,30 @@ El sistema está compuesto por los siguientes módulos principales:
 ## 📁 Estructura del proyecto
 
 ```
-Autoavanza
-├── README.md
-├── assets
+Autoavanza                  
+├── .gitignore              
+├── README.md               
+├── assets                  
 │   └── img
-│       └── logo.png
-├── data
-│   ├── Caso 12.zip
-│   └── Caso 6.zip
-├── src
-│   ├── DataExtraction.py
-│   ├── DocumentClassification.py
-│   ├── OCR.py
-│   ├── QRExctraction.py
-│   ├── Staging.py
-│   └── autoavanza.py
-└── temp
-    ├── archivos
-    │   ├── Caso 12
-    │   │   ├── TK 61417-1_FACTURA.pdf
-    │   │   ├── TK 61417-2_FACTURA REVERSO.pdf
-    │   │   ├── TK 61417-3_INE.pdf
-    │   │   ├── TK 61417-4_INE REVERSO.pdf
-    │   │   ├── TK 61417-5_TARJETA CIRCULACION.pdf
-    │   │   └── TK 61417-6_TARJETA CIRCULACION REVERSO.pdf
-    │   └── __MACOSX
-    │       └── Caso 12
+│       └── logo.png        # Logo for proyect with Monte de Piedad
+├── data                    # Sample input data or test cases for processing
+│   ├── Caso 12.zip         # Compressed folder with documents for case 12
+│   └── Caso 6.zip          # Compressed folder with documents for case 6
+├── src                     
+│   ├── DataExtraction.py           # Extracts key information from OCR output
+│   ├── DocumentClassification.py   # Classifies documents based on extracted text
+│   ├── OCR.py                      # Module to perform OCR (Optical Character Recognition) on documents
+│   ├── QRExctraction.py            # Detects and decodes QR codes from images
+│   ├── Staging.py                  # Handles intermediate storage or data preprocessing
+│   └── autoavanza.py               # Main script to run the full pipeline using streamlit
+└── temp                            # Temporary folder used to store processed files and intermediate outputs
+    ├── archivos                    # Decompressed and organized documents for a specific case
+    │   └── Caso 12
+    │       ├── TK 61417-1_FACTURA.pdf                     # Vehicle invoice (front)
+    │       ├── TK 61417-2_FACTURA REVERSO.pdf             # Vehicle invoice (back)
+    │       ├── TK 61417-3_INE.pdf                         # INE (voter ID) front side
+    │       ├── TK 61417-4_INE REVERSO.pdf                 # INE back side
+    │       ├── TK 61417-5_TARJETA CIRCULACION.pdf         # Circulation card front side
+    │       └── TK 61417-6_TARJETA CIRCULACION REVERSO.pdf # Circulation card back side
     └── captchas
-        └── captcha.png
-Autoavanza/
-├── data/                # Datos de entrada y ejemplos de documentos
-├── src/                 # Código fuente principal
-│   ├── ocr/             # Módulos relacionados con OCR
-│   ├── classification/  # Lógica de clasificación de documentos
-│   ├── validation/      # Reglas y lógica de validación
-│   └── app.py           # Aplicación principal de Streamlit
-├── temp/                # Archivos temporales generados durante la ejecución
-├── requirements.txt     # Dependencias del proyecto
-└── README.md            # Documentación del proyecto
-```
-
-## 🚀 Instalación y ejecución
-
-1. **Clonar el repositorio**:
-
-   ```bash
-   git clone https://github.com/AndreaQuirozO/Autoavanza.git
-   cd Autoavanza
-   ```
-
-2. **Crear y activar un entorno virtual (opcional pero recomendado)**:
-
-   ```bash
-   python -m venv env
-   source env/bin/activate  # En Windows: env\Scripts\activate
-   ```
-
-3. **Instalar las dependencias**:
-
-   ```bash
-   pip install -r requirements.txt
-   ```
-
-4. **Ejecutar la aplicación**:
-
-   ```bash
-   streamlit run src/app.py
-   ```
-
-## 🧪 Ejemplo de uso
-
-1. Inicia la aplicación y carga una imagen o PDF de un documento.
-2. El sistema extraerá el texto utilizando OCR.
-3. Clasificará automáticamente el tipo de documento.
-4. Aplicará las reglas de validación correspondientes y mostrará los resultados en pantalla.
-
-## 📌 Tecnologías utilizadas
-
-- **Python 3.8+**
-- **Streamlit**: Para la creación de la interfaz web interactiva.
-- **Tesseract OCR**: Motor de OCR para la extracción de texto.
-- **scikit-learn**: Para la clasificación de documentos.
-- **Pandas y NumPy**: Para el manejo y análisis de datos. ([ses4255/Versatile-OCR-Program - GitHub](https://github.com/ses4255/Versatile-OCR-Program?utm_source=chatgpt.com))
-
-## 📄 Licencia
-
-Este proyecto está bajo la Licencia MIT. Consulta el archivo [LICENSE](LICENSE) para más detalles.
-
----
-
-¿Te gustaría que incluya una sección con capturas de pantalla o ejemplos visuales para mejorar la presentación? 
+        └── captcha.png     # CAPTCHA image to validate document authenticity with external services
