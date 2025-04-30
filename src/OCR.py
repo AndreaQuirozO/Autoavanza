@@ -7,7 +7,7 @@ from Foundation import NSDictionary
 from wurlitzer import pipes
 from pdf2image import convert_from_path
 
-class DataExtractor:
+class TextExtractor:
     """
     A class to process PDF and image documents using Apple's Vision framework and pdf2image.
 
