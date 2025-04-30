@@ -74,6 +74,7 @@ def process_and_classify(directory):
                     classified_documents[os.path.basename(new_file_name)] = {"type": document, "filename": new_file_name, "text": results}
     return classified_documents
 
+
 def get_file_hash(file):
     return hashlib.md5(file.getbuffer()).hexdigest()
 
@@ -259,6 +260,7 @@ if uploaded_file is not None:
 
             else:
                 st.error("⚠️ No se encontró ningún archivo clasificado como FACTURA.")
+                st.session_state.mostrar_datos = True
 
 
 
@@ -276,27 +278,8 @@ if uploaded_file is not None:
 
                     if datos_factura_SAT:
                         st.success("✅ Datos extraídos correctamente del SAT")
-
-                        st.markdown("## ✅ Otros Datos Extraídos")
-
-                        if "datos_factura" in st.session_state:
-                            st.subheader("📄 Datos de la Factura")
-                            st.json(st.session_state.datos_factura)
-
-                        st.subheader("📄 Datos del SAT")
-                        st.json(datos_factura_SAT)
-
-                        if "datos_factura_reverso" in st.session_state:
-                            st.subheader("📄 Datos del Reverso de la Factura")
-                            st.json(st.session_state.datos_factura_reverso)
-
-                        if "datos_ine" in st.session_state:
-                            st.subheader("🪪 Datos del INE")
-                            st.json(st.session_state.datos_ine)
-
-                        if "datos_tarjeta" in st.session_state:
-                            st.subheader("🚗 Datos de la Tarjeta de Circulación")
-                            st.json(st.session_state.datos_tarjeta)
+                        st.session_state.datos_factura_SAT = datos_factura_SAT  # Save SAT data
+                        st.session_state.mostrar_datos = True
 
                         # Clean up session state
                         st.session_state.validator.close_browser()
@@ -329,4 +312,30 @@ if uploaded_file is not None:
                             del st.session_state[key]
 
 
+    if st.session_state.get("mostrar_datos", False):
+        st.markdown("## Datos Extraídos")
 
+        if "datos_factura" in st.session_state:
+            st.subheader("📄 Datos de la Factura")
+            for key, value in st.session_state.datos_factura.items():
+                st.write(f"**{key}**: {value}")
+
+        if "datos_factura" in st.session_state:
+            st.subheader("📄 Datos del SAT")
+            for key, value in datos_factura_SAT.items():
+                st.write(f"**{key}**: {value}")
+
+        if "datos_factura_reverso" in st.session_state:
+            st.subheader("📄 Datos del Reverso de la Factura")
+            for key, value in st.session_state.datos_factura_reverso.items():
+                st.write(f"**{key}**: {value}")
+
+        if "datos_ine" in st.session_state:
+            st.subheader("🪪 Datos del INE")
+            for key, value in st.session_state.datos_ine.items():
+                st.write(f"**{key}**: {value}")
+
+        if "datos_tarjeta" in st.session_state:
+            st.subheader("🚗 Datos de la Tarjeta de Circulación")
+            for key, value in st.session_state.datos_tarjeta.items():
+                st.write(f"**{key}**: {value}")
