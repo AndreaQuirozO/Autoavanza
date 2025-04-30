@@ -10,5 +10,7 @@ temp/
 # misc
 .DS_Store
 
-
 temp/archivos/__MACOSX
+
+# ignore ALL files in ANY directory named __pycache__
+*__pycache__/
