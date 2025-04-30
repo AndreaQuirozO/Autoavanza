@@ -39,11 +39,11 @@ class DataExtractor:
             - Only the first page of the PDF is saved as an image.
             - The output image is saved with the same base name as the PDF, but with a .jpg extension.
         """
-        image_path = pdf_path.split('.')[0] + '.jpg'
+        self.image_path = pdf_path.split('.')[0] + '.jpg'
         images = convert_from_path(pdf_path)
         for count, image in enumerate(images):
-            image.save(image_path, 'JPEG')
-        return image_path
+            image.save(self.image_path, 'JPEG')
+        return self.image_path
 
     def image_to_text(self, img_path):
         """
@@ -96,3 +96,16 @@ class DataExtractor:
                     recognized_text = text_observation.topCandidates_(1)[0]
                     results.append(recognized_text.string())
         return handler
+    
+
+    def delete_image(self):
+        """
+        Deletes the image file created during PDF conversion.
+
+        Raises:
+            FileNotFoundError: If the image file does not exist.
+        """
+        if os.path.exists(self.image_path):
+            os.remove(self.image_path)
+        else:
+            raise FileNotFoundError(f"The file {self.image_path} does not exist.")

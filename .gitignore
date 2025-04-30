@@ -1,0 +1,14 @@
+# ignore ALL .log files
+*.log
+
+# ignore ALL files in ANY directory named temp
+temp/
+
+# production
+/build
+
+# misc
+.DS_Store
+
+
+temp/archivos/__MACOSX
