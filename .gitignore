@@ -1,16 +1,14 @@
-# ignore ALL .log files
+# Ignore ALL .log files
 *.log
 
-# ignore ALL files in ANY directory named temp
-temp/
+# Ignore 'build' directory in the root
+/build/
 
-# production
-/build
-
-# misc
+# Ignore macOS system files
 .DS_Store
 
-temp/archivos/__MACOSX
+# Ignore macOS folder created in zip extracts
+temp/archivos/__MACOSX/
 
-# ignore ALL files in ANY directory named __pycache__
-*__pycache__/
+# Ignore __pycache__ folders anywhere
+**/__pycache__/
