@@ -1,0 +1,16 @@
+[theme]
+primaryColor = "#911E42"                # Burgundy used in "financiarte"
+backgroundColor = "#FFF8F5"             # Soft off-white background
+secondaryBackgroundColor = "#FFF1E8"    # Light pinkish beige for widgets
+textColor = "#2E1C13"                   # Dark brown text
+font-family = "Merriweather"                       # Elegant font like in the image
+
+[server]
+headless = true
+enableCORS = false
+port = 8501
+
+[browser]
+gatherUsageStats = false
+serverAddress = "localhost"
+serverPort = 8501
