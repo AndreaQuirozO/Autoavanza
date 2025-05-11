@@ -68,11 +68,18 @@ class FacturaDataExtractor(BaseDataExtractor):
             7. NIV: Número de Identificación Vehicular (también conocido como número de serie).  
             8. Leyenda primera emisión: Texto (o parte del texto) que indique que el documento es la primera emisión, por ejemplo: “El presente documento se da como primera impresión...”  
             9. Cadena original del complemento de certificación digital del SAT: Texto completo de la cadena original que aparece en la parte inferior del documento y que corresponde a la certificación digital del SAT.
+            10. Nombre Emisor: Nombre completo de la agencia de autos que emite la factura. Ejemplo: "DALTON AUTOS ASIATICOS CDMX S.A. DE C.V."
+            11. Dirección de la agencia: Dirección completa de la agencia de autos.  
+            12. Folio Fiscal: Folio único de la factura, generalmente ubicado en una sección visible del documento.  
+            13. RFC Receptor: El RFC de la persona que compra el vehículo.  
+            14. RFC Emisor: El RFC de la agencia de autos emisora de la factura.  
+            15. Fecha Certificación: Fecha y hora en que el SAT certificó el comprobante fiscal digital. Puede venir en diversos formatos como '2022-11-04T10:41:26' o '28/08/2020 11:32'.  
+            16. Fecha Expedición: Fecha en la que se emitió la factura o comprobante fiscal. Puede venir en diversos formatos como '2022-11-04T10:41:26' o '28/08/2020 11:32'.  
 
             Guías adicionales:
             - Solo extrae lo que esté explícitamente presente en el documento, incluso si está en una sección separada o difícil de leer.  
             - No infieras ni completes información por tu cuenta. Si algún campo no está disponible, indica 'N/A'.
-    """
+        """
 
 
 
@@ -106,12 +113,24 @@ class TarjetCirculacionDataExtractor(BaseDataExtractor):
 
             Claves requeridas y su descripción:
             1. Nombre del solicitante: Nombre completo del titular de la tarjeta de circulación.  
-            2. Fecha de vigencia del año en curso: Fecha de vencimiento de la tarjeta correspondiente al año actual.  
-            3. NIV: Número de Identificación Vehicular.  
-            4. Número de motor: Número de serie del motor del vehículo.  
-            5. Marca: Marca del vehículo. Ejemplo: "Volkswagen", "Chevrolet", "KIA".  
-            6. Modelo: Modelo del vehículo. Ejemplo: "Jetta", "Aveo".  
-            7. Año: Año del vehículo. Ejemplo: "2020", "2023".
+            2. Fecha de vigencia: Devuelve un objeto con dos claves:
+                - `"tipo"`: Puede ser `"fecha"` (si se indica una fecha de vencimiento específica), `"periodo"` (si se menciona un periodo de validez como "3 años"), o `"permanente"` (si se indica así explícitamente).
+                - `"valor"`: El texto exacto que aparece en el documento para la vigencia.  
+                Ejemplo:  
+                    {"tipo": "fecha", "valor": "12/04/2027"}  
+                    {"tipo": "periodo", "valor": "3 años"}  
+                    {"tipo": "permanente", "valor": "Permanente"}  
+                    {"tipo": "N/A", "valor": "N/A"}
+            3. Fecha de expedición: Fecha en la que se emitió la tarjeta de circulación. Extrae el texto tal como aparece en el documento. Ejemplo: "28/08/2023", "2022-11-04". Si no está presente, usar "N/A".
+            4. Placa: Número de la placa del vehículo. Ejemplo: "ABC123D", "NRW8765". Si no está presente, indica "N/A".
+            5. Estado o entidad federativa: Nombre del estado o entidad que emitió la tarjeta de circulación. Ejemplo: "Ciudad de México", "Jalisco", "Nuevo León". Si no está presente, indica "N/A".
+            6. NIV: Número de Identificación Vehicular.  
+            7. Número de motor: Número de serie del motor del vehículo.  
+            8. Marca: Marca del vehículo. Ejemplo: "Volkswagen", "Chevrolet", "KIA".  
+            9. Modelo: Modelo del vehículo. Ejemplo: "Jetta", "Aveo".  
+            10. Año: Año del vehículo. Ejemplo: "2020", "2023".  
+            11. Versión: Versión o submodelo del vehículo. Ejemplo: "Sense", "LE 4x4".  
+            12. Uso del vehículo: Indica el uso registrado del vehículo. Extrae literalmente el texto que aparece, por ejemplo: "Particular", "Público", "Oficial", etc. Si no está presente, indica 'N/A'.
 
             Guías adicionales:
             - Solo extrae lo que esté explícitamente presente en el documento, aunque el texto esté en mayúsculas, parcialmente ilegible o mal alineado.  
