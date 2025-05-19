@@ -79,8 +79,13 @@ def get_file_hash(file):
     return hashlib.md5(file.getbuffer()).hexdigest()
 
 
+def is_data_complete(data_dict, required_keys):
+    """Check if all required keys are present and non-empty."""
+    return all(data_dict.get(k) for k in required_keys)
 
-# Streamlit interface
+
+
+# ---------------------------  Streamlit interface begins  --------------------------- #
 logo = Image.open(logo_path)
 st.set_page_config( page_title='Autoavanza', page_icon=logo)
 
@@ -91,7 +96,7 @@ with col2:
 st.container()
 st.markdown("## Carga de Documentos")
 
-# Upload zip file
+# ---------------------------  Upload and decompress ZIP  --------------------------- #
 uploaded_file = st.file_uploader("Subir un archivo ZIP que contenga los documentos en PDF", type="zip")
 
 if uploaded_file is not None:
@@ -101,6 +106,9 @@ if uploaded_file is not None:
         st.session_state.last_file_hash = file_hash
         directory = decompress_zip(uploaded_file)
         st.success(f"Archivos decomprimidos correctamente")
+
+        # ---------------------------  Classify documents  --------------------------- #
+
         st.session_state.classified_documents_data = process_and_classify(directory)
 
     classified_documents_data = st.session_state.get("classified_documents_data", {})
