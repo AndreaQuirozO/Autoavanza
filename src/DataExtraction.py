@@ -113,14 +113,8 @@ class TarjetCirculacionDataExtractor(BaseDataExtractor):
 
             Claves requeridas y su descripción:
             1. Nombre del solicitante: Nombre completo del titular de la tarjeta de circulación.  
-            2. Fecha de vigencia: Devuelve un objeto con dos claves:
-                - `"tipo"`: Puede ser `"fecha"` (si se indica una fecha de vencimiento específica), `"periodo"` (si se menciona un periodo de validez como "3 años"), o `"permanente"` (si se indica así explícitamente).
-                - `"valor"`: El texto exacto que aparece en el documento para la vigencia.  
-                Ejemplo:  
-                    {"tipo": "fecha", "valor": "12/04/2027"}  
-                    {"tipo": "periodo", "valor": "3 años"}  
-                    {"tipo": "permanente", "valor": "Permanente"}  
-                    {"tipo": "N/A", "valor": "N/A"}
+            2. Tipo de fecha de vigencia: Puede ser `"fecha"` (si se indica una fecha de vencimiento específica), `"periodo"` (si se menciona un periodo de validez como "3 años"), o `"permanente"` (si se indica así explícitamente).
+            3. Valor de fecha de vigencia: El texto exacto que aparece en el documento para la vigencia. Puede ser una fecha, como "12/04/2027", o un periodo como "3 años", o "Permanente".
             3. Fecha de expedición: Fecha en la que se emitió la tarjeta de circulación. Extrae el texto tal como aparece en el documento. Ejemplo: "28/08/2023", "2022-11-04". Si no está presente, usar "N/A".
             4. Placa: Número de la placa del vehículo. Ejemplo: "ABC123D", "NRW8765". Si no está presente, indica "N/A".
             5. Estado o entidad federativa: Nombre del estado o entidad que emitió la tarjeta de circulación. Ejemplo: "Ciudad de México", "Jalisco", "Nuevo León". Si no está presente, indica "N/A".

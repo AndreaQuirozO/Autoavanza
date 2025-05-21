@@ -20,7 +20,9 @@ from DocumentClassification import DocumentClassifier
 from Staging import Staging
 from QRExctraction import CFDIValidator
 from DataExtraction import INEDataExtractor, FacturaDataExtractor, FacturaReversoDataExtractor, TarjetCirculacionDataExtractor
-
+from DataValidation import DataValidator
+from SignatureStampValidation import SignatureStampValidator
+from Ruling import RulingMaker
 
 load_dotenv()
 GEMINI_API_KEY = os.getenv('GEMINI_API_KEY')
@@ -79,9 +81,50 @@ def get_file_hash(file):
     return hashlib.md5(file.getbuffer()).hexdigest()
 
 
-def is_data_complete(data_dict, required_keys):
-    """Check if all required keys are present and non-empty."""
-    return all(data_dict.get(k) for k in required_keys)
+def all_values_valid(data):
+    """
+    Recursively checks that all values in the dictionary (and nested dictionaries)
+    are not equal to 'N/A'.
+    """
+    if isinstance(data, dict):
+        for value in data.values():
+            if not all_values_valid(value):
+                return False
+    elif isinstance(data, list):
+        for item in data:
+            if not all_values_valid(item):
+                return False
+    else:
+        if data == 'N/A':
+            return False
+    return True
+
+
+def display_single_value_with_edit(document_name, field_key, extracted_value):
+    data = st.session_state.get(document_name, {})
+    if extracted_value == 'N/A':
+        updated_val = st.text_input(f"❗️❗️{field_key}❗️❗️", value=extracted_value, key=f"{document_name}_{field_key}")
+    else:
+        updated_val = st.text_input(f"{field_key}", value=extracted_value, key=f"{document_name}_{field_key}")
+    # Save back just this single value (keep other fields if present)
+    updated_data = data.copy()
+    updated_data[field_key] = updated_val
+    st.session_state[document_name] = updated_data
+
+def display_single_value_with_dropdown(document_name, field_key, extracted_value, options):
+    data = st.session_state.get(document_name, {})
+    default_val = data.get(field_key, extracted_value)
+    updated_val = st.selectbox(
+        f"{field_key}",
+        options=options,
+        index=options.index(default_val) if default_val in options else 0,
+        key=f"{document_name}_{field_key}"
+    )
+    # Save back just this single value (keep other fields if present)
+    updated_data = data.copy()
+    updated_data[field_key] = updated_val
+    st.session_state[document_name] = updated_data
+
 
 
 
@@ -181,7 +224,7 @@ if uploaded_file is not None:
         # Update the session state with the potentially renamed files
         st.session_state.classified_documents_data.update(updated_documents_data)
         
-        if st.button("✅ Apruebo Clasificación", key="aprobacion_clasificacion"):
+        if st.button("✅ Apruebo clasificación, continuar con extracción de datos", key="aprobacion_clasificacion"):
             factura_file = None
             document_files = {}
 
@@ -326,24 +369,174 @@ if uploaded_file is not None:
         if "datos_factura" in st.session_state:
             st.subheader("📄 Datos de la Factura")
             for key, value in st.session_state.datos_factura.items():
-                st.write(f"**{key}**: {value}")
+                display_single_value_with_edit("datos_factura", key, value)
+                # st.write(f"**{key}**: {value}")
 
-        if "datos_factura" in st.session_state:
+        if "datos_factura_SAT" in st.session_state:
             st.subheader("📄 Datos del SAT")
-            for key, value in datos_factura_SAT.items():
-                st.write(f"**{key}**: {value}")
+            for key, value in st.session_state.datos_factura_SAT.items():
+                display_single_value_with_edit("datos_factura_SAT", key, value)
+                # st.write(f"**{key}**: {value}")
 
         if "datos_factura_reverso" in st.session_state:
             st.subheader("📄 Datos del Reverso de la Factura")
             for key, value in st.session_state.datos_factura_reverso.items():
-                st.write(f"**{key}**: {value}")
+                display_single_value_with_edit("datos_factura_reverso", key, value)
+                # st.write(f"**{key}**: {value}")
 
         if "datos_ine" in st.session_state:
             st.subheader("🪪 Datos del INE")
             for key, value in st.session_state.datos_ine.items():
-                st.write(f"**{key}**: {value}")
+                display_single_value_with_edit("datos_ine", key, value)
+                # st.write(f"**{key}**: {value}")
 
         if "datos_tarjeta" in st.session_state:
             st.subheader("🚗 Datos de la Tarjeta de Circulación")
             for key, value in st.session_state.datos_tarjeta.items():
-                st.write(f"**{key}**: {value}")
+                if key == "Tipo de fecha de vigencia":
+                    display_single_value_with_dropdown("datos_tarjeta", key, value, ["fecha", "periodo", "permanente"])
+                else:
+                    display_single_value_with_edit("datos_tarjeta", key, value)
+                # st.write(f"**{key}**: {value}")
+
+        
+        all_data_keys = ["datos_factura", "datos_factura_SAT", "datos_factura_reverso", "datos_ine", "datos_tarjeta"]
+
+        all_documents = [st.session_state.datos_factura, st.session_state.datos_factura_SAT, st.session_state.datos_factura_reverso, st.session_state.datos_ine, st.session_state.datos_tarjeta]
+
+        data_is_complete = all(
+            all_values_valid(st.session_state.get(key, {}))
+            for key in all_data_keys
+        )
+
+        if data_is_complete:
+            if 'datos_aprobados' not in st.session_state:
+                st.session_state.datos_aprobados = False
+
+            if st.button("✅ Apruebo datos, continuar con validación"):
+                st.session_state.datos_aprobados = True
+
+            if st.session_state.datos_aprobados:
+
+                data_validator = DataValidator(
+                    st.session_state.datos_factura, 
+                    st.session_state.datos_factura_SAT, 
+                    st.session_state.datos_factura_reverso, 
+                    st.session_state.datos_ine, 
+                    st.session_state.datos_tarjeta
+                    )
+                
+                data_results_bool, data_results_message = data_validator.data_validator_pipeline()
+
+                st.markdown("## Resultados de la validación")
+                for (k_b, v_b), (k_m, v_m) in zip(data_results_bool.items(), data_results_message.items()):
+                    if isinstance(v_m, dict):
+                        estado = v_m.get("Estado", "")
+                        detalles = v_m.get("detalles", {})
+                        detalle_lines = "\n".join([f"- **{k}**: {v}" for k, v in detalles.items()])
+                        formatted_message = f"**Estado**: {estado}\n\n{detalle_lines}"
+                    else:
+                        formatted_message = v_m
+
+                    if v_b:
+                        st.success(f"✅  {formatted_message}")
+                    else:
+                        st.error(f"❌  {formatted_message}")
+
+                if 'validar_firmas_sellos' not in st.session_state:
+                    st.session_state.validar_firmas_sellos = False
+
+                if st.button("✅ Apruebo validación de datos, continuar con validación de firmas y sellos"):
+                    st.session_state.validar_firmas_sellos = True
+
+                if st.session_state.validar_firmas_sellos:
+
+                    by_type = {doc["type"]: doc["filename"] for doc in st.session_state.classified_documents_data.values()}
+
+                    factura_reverso_path = by_type.get("FACTURA REVERSO")
+                    ine_path = by_type.get("INE")
+                    tarjeta_path = by_type.get("TARJETA CIRCULACION")
+
+                    model_path = os.path.join(os.path.dirname(__file__), 'models', 'best.pt')
+                    sig_val = SignatureStampValidator(model_path, ine_path, factura_reverso_path, tarjeta_path)
+
+                    sign_results_bool, sign_results_message, sign_results_path = sig_val.signature_stamp_validator_pipeline()
+                    
+                    st.markdown("## Resultados de la validación")
+                    for (k_b, v_b), (k_m, v_m) in zip(sign_results_bool.items(), sign_results_message.items()):
+                        formatted_message = v_m
+
+                        if v_b:
+                            st.success(f"✅  {formatted_message}")
+                        else:
+                            st.error(f"❌  {formatted_message}")
+
+                        ine_save_path = sign_results_path.get("validacion_firma_ine_factura_ine_path")
+                        factura_save_path = sign_results_path.get("validacion_firma_ine_factura_factura_path")
+                        tarjeta_save_path = sign_results_path.get("validacion_firma_ine_tarjeta_tarjeta_path")
+                        if k_b == 'validacion_firma_ine_factura' and ine_save_path and factura_save_path:
+
+                            col1, col2 = st.columns(2)
+
+                            with col1:
+                                st.image(ine_save_path, caption="Firma de INE", width=300)
+
+                            with col2:
+                                st.image(factura_save_path, caption="Firma de Factura", width=300)
+
+                            st.session_state.agree_validation_ine_factura = st.checkbox("Rechazo el resultado de la comparación automática de firmas")
+                            
+                            if st.session_state.agree_validation_ine_factura:
+                                if v_b:
+                                    sign_results_bool[k_b] = False
+                                    sign_results_message[k_b] = 'Se requiere que el solicitante vuelva a firmar lo más parecido posible ya que no coincide firma en INE y Reverso de Factura'
+                                else:
+                                    sign_results_bool[k_b] = True
+                                    sign_results_message[k_b] = 'Firma de INE coincide con Reverso de Factura'
+  
+
+
+                        elif k_b == 'validacion_firma_ine_tarjeta' and ine_save_path and tarjeta_save_path:
+                            col1, col2 = st.columns(2)
+                            with col1:
+                                st.image(ine_save_path, caption="Firma de INE", width=300)
+
+                            with col2:
+                                st.image(tarjeta_save_path, caption="Firma de Tarjeta", width=300)
+
+                            st.session_state.agree_validation_ine_tarjeta = st.checkbox("Rechazo el resultado de la comparación automática de firmas")
+                            
+                            if st.session_state.agree_validation_ine_tarjeta:
+                                if v_b:
+                                    sign_results_bool[k_b] = False
+                                    sign_results_message[k_b] = "Se solicita corrección - en 24hrs. Se rechaza por discrepancia en firma de INE y Tarjeta de Circulación"
+                                else:
+                                    sign_results_bool[k_b] = True
+                                    sign_results_message[k_b] = "Firma de INE coincide con Tarjeta de Circualción"
+
+                        if v_m == 'No se encontró firma en Tarjeta de Circulación':
+                            agree_falta_firma_tarjeta = st.checkbox("Confirmo que no hay firma en tarjeta de circulación")
+                            if agree_falta_firma_tarjeta:
+                                sign_results_bool[k_b] = True
+                                sign_results_message[k_b] = "Esta tarjeta de circulación no cuenta con firma"
+                        
+                    if 'aprobado_firmas_sellos' not in st.session_state:
+                        st.session_state.aprobado_firmas_sellos = False
+                    
+                    if st.button("✅ Apruebo validación de firmas, continuar con certamen"):
+                        st.session_state.aprobado_firmas_sellos = True
+
+                    if st.session_state.aprobado_firmas_sellos:
+                        ruler = RulingMaker(data_results_message, data_results_bool, sign_results_message, sign_results_bool, GEMINI_API_KEY)
+                        response = ruler.obtener_dictamen()
+                        st.markdown("## Dictámen")
+                        st.write(response)
+
+
+                
+
+
+
+        else:
+            st.warning("⚠️ Algunos campos están incompletos (N/A). Complétalos para continuar.")
+            
