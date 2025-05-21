@@ -528,9 +528,9 @@ if uploaded_file is not None:
 
                     if st.session_state.aprobado_firmas_sellos:
                         ruler = RulingMaker(data_results_message, data_results_bool, sign_results_message, sign_results_bool, GEMINI_API_KEY)
-                        response = ruler.obtener_dictamen()
+                        st.session_state.response = ruler.obtener_dictamen()
                         st.markdown("## Dictámen")
-                        st.write(response)
+                        st.write(st.session_state.response)
 
 
                 
