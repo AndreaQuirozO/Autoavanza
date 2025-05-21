@@ -129,7 +129,7 @@ class SignatureComparator:
         return img
 
     # -------------------- 1. Firma en la INE ---------------------- #
-    def _detect_signature_on_single_ine_image(self, img_path: str) -> Tuple[np.ndarray, str]:
+    def _extract_ine_signature(self, img_path: str) -> Tuple[np.ndarray, str]:
         """
         Detects and crops the signature from an INE image.
 
@@ -152,7 +152,7 @@ class SignatureComparator:
 
 
         if not os.path.isfile(img_path):
-            raise RuntimeError(f"El archivo no existe: {img_path}")
+            return False, f"El archivo no existe: {img_path}"
 
         img  = cv2.imread(img_path)
         gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
@@ -162,7 +162,7 @@ class SignatureComparator:
         dil     = cv2.dilate(th, np.ones((5, 5), np.uint8), iterations=2)
         cnts,_  = cv2.findContours(dil, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
         if not cnts:
-            raise RuntimeError("No se encontró la credencial en la imagen.")
+            return False, "No se encontró la credencial en la imagen"
 
         x, y, w, h = cv2.boundingRect(max(cnts, key=cv2.contourArea))
         ine_crop   = img[y:y+h, x:x+w]
@@ -171,9 +171,9 @@ class SignatureComparator:
         preds  = self.firma_detector_model.predict(ine_crop, conf=self.conf_ine, verbose=False)
         boxes  = preds[0].boxes
         if len(boxes) == 0:
-            raise RuntimeError("No se detectó firma en Ine.")
+            return False, "No se detectó firma en INE"
         if len(boxes) > 1:
-            raise RuntimeError("Se detectaron varias firmas en Ine.")
+            return False, "Se detectaron varias firmas en INE"
 
         x1, y1, x2, y2 = boxes.xyxy[0].cpu().numpy().astype(int)
         roi = ine_crop[y1:y2, x1:x2]
@@ -189,43 +189,6 @@ class SignatureComparator:
 
         return roi, save_path
 
-
-    def _extract_ine_signature(self, image_path: str) -> Tuple[np.ndarray, str]:
-        """
-        Extracts the signature from an INE image.
-
-        Parameters
-        ----------
-        image_path : str
-            Path to the image file.
-
-        Returns
-        -------
-        Tuple[np.ndarray, str]
-            - Signature image.
-            - Path where the signature was saved (if saving is enabled).
-
-        Raises
-        ------
-        RuntimeError
-            If no valid signature is detected.
-        """
-
-
-        last_error = None
-
-        try:
-            return self._detect_signature_on_single_ine_image(image_path)
-        except RuntimeError as err:
-            last_error = err            # guarda el motivo por si hay que propagarlo
-                # Sigue al siguiente path
-
-        # Si salimos del bucle es que ambos intentos fallaron
-        raise RuntimeError(
-            f"No se detectó una firma válida en ninguno el archivo:\n"
-            f"  · {image_path}\n"
-            f"Motivo del último intento: {last_error}"
-        )
 
     # --------------- 2. Firma en documento genérico --------------- #
     def _extract_factura_signature(self, img_path: str) -> Tuple[np.ndarray, str]:
@@ -251,7 +214,7 @@ class SignatureComparator:
 
 
         if not os.path.isfile(img_path):
-            raise RuntimeError(f"El archivo no existe: {img_path}")
+            return False, f"El archivo no existe: {img_path}"
         
         img  = cv2.imread(img_path)
 
@@ -259,9 +222,9 @@ class SignatureComparator:
         preds  = self.firma_detector_model.predict(img_path, conf=self.conf_doc, verbose=False)
         boxes  = preds[0].boxes
         if len(boxes) == 0:
-            raise RuntimeError("No se detectó firma en Documento.")
+            return False, "No se detectó firma en Reverso de Factura"
         if len(boxes) > 1:
-            raise RuntimeError("Se detectaron varias firmas en Documento.")
+            return False, "Se detectaron varias firmas en Reverso de Factura"
 
         x1, y1, x2, y2 = boxes.xyxy[0].cpu().numpy().astype(int)
         roi = img[y1:y2, x1:x2]
@@ -276,13 +239,74 @@ class SignatureComparator:
             cv2.imwrite(save_path, cv2.cvtColor(roi_rgb, cv2.COLOR_RGB2BGR))
 
         return roi, save_path
+    
+    # -------------------- 3. Firma en la INE ---------------------- #
+    def _extract_tarjeta_signature(self, img_path: str) -> Tuple[np.ndarray, str]:
+        """
+        Detects and crops the signature from an INE image.
+
+        Parameters
+        ----------
+        img_path : str
+            Path to the INE image.
+
+        Returns
+        -------
+        Tuple[np.ndarray, str]
+            - Cropped signature region as a NumPy array.
+            - Path where the signature image was saved (only if save_signature_ine is True).
+
+        Raises
+        ------
+        RuntimeError
+            If exactly one signature is not detected.
+        """
+
+
+        if not os.path.isfile(img_path):
+            return False, f"El archivo no existe: {img_path}"
+
+        img  = cv2.imread(img_path)
+        gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+
+        # 1) Aislar credencial
+        _, th   = cv2.threshold(gray, 240, 255, cv2.THRESH_BINARY_INV)
+        dil     = cv2.dilate(th, np.ones((5, 5), np.uint8), iterations=2)
+        cnts,_  = cv2.findContours(dil, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        if not cnts:
+            return False, "No se encontró la credencial en la imagen"
+
+        x, y, w, h = cv2.boundingRect(max(cnts, key=cv2.contourArea))
+        ine_crop   = img[y:y+h, x:x+w]
+
+        # 2) Detectar firma con YOLO/DETR
+        preds  = self.firma_detector_model.predict(ine_crop, conf=self.conf_ine, verbose=False)
+        boxes  = preds[0].boxes
+        if len(boxes) == 0:
+            return False, "No se detectó firma en Tarjeta de Circulación"
+        if len(boxes) > 1:
+            return False, "Se detectaron varias firmas en Tarjeta de Circulación"
+
+        x1, y1, x2, y2 = boxes.xyxy[0].cpu().numpy().astype(int)
+        roi = ine_crop[y1:y2, x1:x2]
+
+        # Visualización opcional
+        if self.save_signature_ine:
+            roi_rgb = cv2.cvtColor(roi, cv2.COLOR_BGR2RGB)
+
+            # Save the image in the staging folder
+            base_name = os.path.splitext(os.path.basename(img_path))[0]
+            save_path = os.path.join(self.staging_signatues_path, f"firma_tarjeta.jpg")
+            cv2.imwrite(save_path, cv2.cvtColor(roi_rgb, cv2.COLOR_RGB2BGR))
+
+        return roi, save_path
 
     
-    # --------------- 3. Comparación de firmas --------------- #
+    # --------------- 4. Comparación de firmas --------------- #
     def _compare_signatures(
         self,
-        fir_ine_img: np.ndarray,
-        fir_doc_img: np.ndarray
+        fir_1_img: np.ndarray,
+        fir_2_img: np.ndarray
     ) -> Tuple[float, bool]:
         """
         Compares two signatures using SSIM.
@@ -304,8 +328,8 @@ class SignatureComparator:
         target_size = (300, 300)
 
         # --- Normalizar tamaño ---
-        ine = cv2.resize(fir_ine_img,  target_size)
-        doc = cv2.resize(fir_doc_img,  target_size)
+        ine = cv2.resize(fir_1_img,  target_size)
+        doc = cv2.resize(fir_2_img,  target_size)
 
         # --- Garantizar GRIS + uint8 ---
         ine = self._to_gray_u8(ine)
@@ -340,7 +364,7 @@ class SignatureComparator:
         return score, is_match
 
     # -------------------- 4. Comparación final -------------------- #
-    def compare(self, ine_img_path: str, doc_img_path: str) -> Tuple[Dict[str, float], str, str]:
+    def compare_ine_factura(self, ine_img_path: str, doc_img_path: str) -> Tuple[Dict[str, float], str, str]:
         """
         Runs the entire pipeline to detect and compare signatures.
 
@@ -367,5 +391,53 @@ class SignatureComparator:
         sig_ine, ine_save_path = self._extract_ine_signature(ine_img_path)
         sig_doc, factura_save_path = self._extract_factura_signature(doc_img_path)
 
-        score, is_match = self._compare_signatures(sig_ine, sig_doc)
-        return {"score": score, "match": is_match}, ine_save_path, factura_save_path
+        if sig_ine is not False and sig_doc is not False:
+            score, is_match = self._compare_signatures(sig_ine, sig_doc)
+            return {"score": score, "match": is_match}, ine_save_path, factura_save_path
+        else:
+            if sig_ine is False and sig_doc is False:
+                return False, None, None
+            elif sig_ine is False:
+                return False, None, factura_save_path
+            elif sig_doc is False:
+                return False, ine_save_path, None
+
+
+
+    def compare_ine_tarjeta(self, ine_img_path: str, doc_img_path: str) -> Tuple[Dict[str, float], str, str]:
+        """
+        Runs the entire pipeline to detect and compare signatures.
+
+        Parameters
+        ----------
+        ine_img_path : str
+            Path to the INE image.
+        doc_img_path : str
+            Path to the document image.
+
+        Returns
+        -------
+        Tuple[Dict[str, float], str, str]
+            - Dictionary with the SSIM score and match result:
+                {
+                    "score": float,
+                    "match": bool
+                }
+            - Path to the saved INE signature image (if saving is enabled).
+            - Path to the saved document signature image (if saving is enabled).
+        """
+
+
+        sig_ine, ine_save_path = self._extract_ine_signature(ine_img_path)
+        sig_tarjeta, tarjeta_save_path = self._extract_tarjeta_signature(doc_img_path)
+
+        if sig_ine is not False and sig_tarjeta is not False:
+            score, is_match = self._compare_signatures(sig_ine, sig_tarjeta)
+            return {"score": score, "match": is_match}, ine_save_path, tarjeta_save_path
+        else:
+            if sig_ine is False and sig_tarjeta is False:
+                return False, None, None
+            elif sig_ine is False:
+                return False, None, tarjeta_save_path
+            elif sig_tarjeta is False:
+                return False, ine_save_path, None
