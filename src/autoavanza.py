@@ -519,6 +519,9 @@ if uploaded_file is not None:
                             if agree_falta_firma_tarjeta:
                                 sign_results_bool[k_b] = True
                                 sign_results_message[k_b] = "Esta tarjeta de circulación no cuenta con firma"
+                            else:
+                                sign_results_bool[k_b] = False
+                                sign_results_message[k_b] = "La detección automática de firmas no encontró firma en Tarjeta de Circulación, pero el usuario confirma que sí hay firma"
                         
                     if 'aprobado_firmas_sellos' not in st.session_state:
                         st.session_state.aprobado_firmas_sellos = False
@@ -527,6 +530,9 @@ if uploaded_file is not None:
                         st.session_state.aprobado_firmas_sellos = True
 
                     if st.session_state.aprobado_firmas_sellos:
+                        st.write(sign_results_message)
+
+
                         ruler = RulingMaker(data_results_message, data_results_bool, sign_results_message, sign_results_bool, GEMINI_API_KEY)
                         st.session_state.response = ruler.obtener_dictamen()
                         st.markdown("## Dictámen")
