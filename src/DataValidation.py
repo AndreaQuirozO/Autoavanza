@@ -192,7 +192,10 @@ class DataValidator:
             bool: True if names match, False otherwise.
             str: Placeholder validation message.
         """
-        return True, 'RFC coincide'
+        if self.datos_factura['RFC Receptor'] == self.datos_factura_SAT['RFC Receptor']:
+            return True, 'RFC coincide'
+        else:
+            return False, 'RFC receptor no coincide en la Factura y el SAT'
 
     # Factura 6.
     def validar_es_primera_emision(self):
