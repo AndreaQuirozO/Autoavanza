@@ -2,6 +2,21 @@ from google import genai
 import os
 from dotenv import load_dotenv
 import json
+from reportlab.pdfgen import canvas
+from reportlab.lib.pagesizes import LETTER
+from reportlab.lib.units import inch
+import tempfile
+from reportlab.lib.pagesizes import LETTER
+from reportlab.lib import colors
+from reportlab.lib.styles import getSampleStyleSheet
+from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
+import tempfile
+import re
+import markdown
+from reportlab.platypus import Paragraph
+from reportlab.lib.styles import getSampleStyleSheet
+import pandas as pd
+
 
 load_dotenv()
 GEMINI_API_KEY = os.getenv('GEMINI_API_KEY')
@@ -74,6 +89,64 @@ class RulingMaker:
             Estructura la respuesta en uno a tres párrafos breves como máximo. Sé formal, preciso y evita repeticiones innecesarias.   
         """ 
 
+    @staticmethod
+    def prettify_key_spanish(key):
+        mapping = {
+            "validacion": "Validación",
+            "nombre": "Nombre",
+            "niv": "NIV",
+            "datos": "Datos",
+            "vehiculo": "Vehículo",
+            "rfc": "RFC",
+            "es": "Es",
+            "primera": "Primera",
+            "emision": "Emisión",
+            "sat": "SAT",
+            "no": "No",
+            "motor": "Motor",
+            "endoso": "Endoso",
+            "vigencia": "Vigencia",
+            "ine": "INE",
+            "tarjeta": "Tarjeta",
+            "circulacion": "Circulación",
+            "uso": "Uso",
+            "adeudos": "Adeudos",
+            "firma": "Firma",
+            "sello": "Sello",
+            "reverso": "Reverso"
+        }
+
+        words = key.split("_")
+        pretty_words = [mapping.get(word, word.capitalize()) for word in words]
+        return " ".join(pretty_words)
+    
+    @staticmethod
+    def clean_markdown(text):
+        # Remove * _ ** and other markdown formatting characters
+        return re.sub(r'[*_`#>-]', '', text).strip()
+    
+    @staticmethod
+    def markdown_to_paragraph(md_text):
+        styles = getSampleStyleSheet()
+        styleN = styles["Normal"]
+        html_text = markdown.markdown(md_text)
+        return Paragraph(html_text, styleN)
+    
+    def build_validation_dataframe(self, message_dict, bool_dict):
+        rows = []
+        for key in message_dict:
+            cumple = "Sí" if bool_dict[key] else "No"
+            mensaje = message_dict[key]
+            if isinstance(mensaje, dict):
+                mensaje = list(mensaje.values())[0]
+            rows.append({
+                "Validación": self.prettify_key_spanish(key),
+                "¿Cumple?": cumple,
+                "Mensaje": mensaje
+            })
+        return pd.DataFrame(rows)
+
+
     def parse_json(self, response):
         """
         Extracts the generated text from the Gemini JSON response.
@@ -104,4 +177,78 @@ class RulingMaker:
             self.sign_results_message, 
             self.sign_results_bool
         )
-        return self.parse_json(response)
+        self.response = self.parse_json(response)
+        return self.response
+
+
+    def generar_pdf_dictamen(self):
+        styles = getSampleStyleSheet()
+        styleN = styles["BodyText"]
+
+        tmp_file = tempfile.NamedTemporaryFile(delete=False, suffix=".pdf")
+        file_path = tmp_file.name
+
+        doc = SimpleDocTemplate(file_path, pagesize=LETTER)
+        elements = []
+
+        title = Paragraph("<b>Dictamen de Validación de Documentos</b>", styles["Title"])
+        elements.append(title)
+        elements.append(Spacer(1, 12))
+
+        # Encabezados de tabla
+        data = [["Validación", "¿Cumple?", "Mensaje"]]
+
+        # Función para añadir filas
+        def add_rows(message_dict, bool_dict):
+            for key in message_dict:
+                cumple = "Sí" if bool_dict[key] else "No"
+                mensaje = message_dict[key]
+                if isinstance(mensaje, dict):
+                    mensaje = list(mensaje.values())[0]
+                data.append([
+                    Paragraph(self.prettify_key_spanish(key), styleN),
+                    Paragraph(cumple, styleN),
+                    Paragraph(mensaje, styleN)
+                ])
+
+        add_rows(self.data_results_message, self.data_results_bool)
+        add_rows(self.sign_results_message, self.sign_results_bool)
+
+        table = Table(data, colWidths=[120, 50, 350])  # ajusta ancho de columnas
+        table.setStyle(TableStyle([
+            ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#CCCCCC")),
+            ("TEXTCOLOR", (0, 0), (-1, 0), colors.black),
+            ("ALIGN", (1, 1), (-1, -1), "LEFT"),
+            ("VALIGN", (0, 0), (-1, -1), "TOP"),
+            ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+            ("FONTSIZE", (0, 0), (-1, -1), 9),
+            ("INNERGRID", (0, 0), (-1, -1), 0.25, colors.grey),
+            ("BOX", (0, 0), (-1, -1), 0.25, colors.black),
+            ("LEFTPADDING", (0, 0), (-1, -1), 4),
+            ("RIGHTPADDING", (0, 0), (-1, -1), 4),
+        ]))
+
+        elements.append(table)
+        if not hasattr(self, 'response'):
+            self.response = self.obtener_dictamen()
+        
+        elements.append(Spacer(1, 24))
+        dictamen_title = Paragraph("<b>Conclusión</b>", styles["Heading2"])
+        dictamen_text = self.markdown_to_paragraph(self.response)
+        elements.extend([dictamen_title, Spacer(1, 6), dictamen_text])
+
+        doc.build(elements)
+
+        return file_path
+    
+
+    def return_table_dictamen(self):
+        # Combine both sets of results
+        df_data = self.build_validation_dataframe(self.data_results_message, self.data_results_bool)
+        df_sign = self.build_validation_dataframe(self.sign_results_message, self.sign_results_bool)
+
+        # Combine into one DataFrame
+        df_total = pd.concat([df_data, df_sign], ignore_index=True)
+
+        return df_total
+
