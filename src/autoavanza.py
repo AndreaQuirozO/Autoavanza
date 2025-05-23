@@ -521,7 +521,7 @@ if uploaded_file is not None:
                                 sign_results_message[k_b] = "Esta tarjeta de circulación no cuenta con firma"
                             else:
                                 sign_results_bool[k_b] = False
-                                sign_results_message[k_b] = "La detección automática de firmas no encontró firma en Tarjeta de Circulación, pero el usuario confirma que sí hay firma"
+                                sign_results_message[k_b] = "La detección automática de firmas no encontró firma en Tarjeta de Circulación, pero el usuario confirma que sí hay firma. Se recomienda intervención manual para checar firmas en Tarjeta de Circulación y Reverso de Factura"
                         
                     if 'aprobado_firmas_sellos' not in st.session_state:
                         st.session_state.aprobado_firmas_sellos = False
@@ -530,16 +530,25 @@ if uploaded_file is not None:
                         st.session_state.aprobado_firmas_sellos = True
 
                     if st.session_state.aprobado_firmas_sellos:
-                        st.write(sign_results_message)
-
-
                         ruler = RulingMaker(data_results_message, data_results_bool, sign_results_message, sign_results_bool, GEMINI_API_KEY)
-                        st.session_state.response = ruler.obtener_dictamen()
+
+
+                        if "response" not in st.session_state:
+                            ruler = RulingMaker(data_results_message, data_results_bool, sign_results_message, sign_results_bool, GEMINI_API_KEY)
+                            st.session_state.response = ruler.obtener_dictamen()  # Only call once!
+
+                        pdf_path = ruler.generar_pdf_dictamen()
+
                         st.markdown("## Dictámen")
+
+                        df_total = ruler.return_table_dictamen()
+                        st.dataframe(df_total, use_container_width=True, hide_index=True, row_height=70)
+
+
                         st.write(st.session_state.response)
 
-
-                
+                        with open(pdf_path, "rb") as f:
+                            st.download_button("Descargar Dictamen en PDF", f, file_name="dictamen_validacion.pdf", mime="application/pdf")
 
 
 
