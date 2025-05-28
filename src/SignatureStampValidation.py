@@ -46,7 +46,7 @@ class SignatureStampValidator:
         """
         # Valdiación manual mostrando factura
         # False: 'Se solicita sello y firma'
-        return True, 'Presencia de sello y firma en Factura'
+        return False, 'Se requiere de intervención humana para validar sello y firma en factura'
     
     # Factura 10.
     def validar_firma_factura_reverso(self):

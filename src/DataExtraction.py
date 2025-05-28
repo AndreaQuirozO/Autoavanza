@@ -42,6 +42,7 @@ class INEDataExtractor(BaseDataExtractor):
             2. Vigencia: Fecha de vigencia indicada en la credencial. Ejemplo: "2029", "2032".
             3. Vigente: Indica si la credencial está vigente usando el año de vigencia. Debe estar como True o False.
             4. Clave de elector: Clave alfanumérica asignada por el INE a cada ciudadano.
+            5. Fecha de nacimiento: Fecha de nacimiento del titular de la credencial. Debe estar en formato "DD/MM/AAAA".
 
             Guías adicionales:
             - Solo extrae lo que esté explícitamente presente en el documento.

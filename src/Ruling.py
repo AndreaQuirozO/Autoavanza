@@ -82,8 +82,10 @@ class RulingMaker:
             Si todos los valores booleanos son True, devuelve un mensaje positivo y claro indicando que el vehículo puede ser empeñado.
             Si algún valor booleano es False, debes indicar claramente:
             Que el vehículo no puede ser empeñado,
-            Cuáles validaciones fallaron, y
+            Cuáles validaciones fallaron (en viñetas), y
             Por qué fallaron, utilizando los mensajes correspondientes de los diccionarios *_results_message.
+            Cuando un mensaje indica que no se encuontró firma ya sea en el Reverso de Factura, Tarjeta de circulación o INE, menciona que se requiere intervención humana para validar la(s) firma(s) faltante(s).
+            Indica claramente en el dictamen que se deben validar manualmente los adeudos del vehículo.
             Importante: No comiences el texto con la palabra “Dictamen”, ya que será añadida como título por separado.
 
             Estructura la respuesta en uno a tres párrafos breves como máximo. Sé formal, preciso y evita repeticiones innecesarias.   
@@ -97,7 +99,7 @@ class RulingMaker:
             "niv": "NIV",
             "datos": "Datos",
             "vehiculo": "Vehículo",
-            "rfc": "RFC",
+            "RFC": "RFC",
             "es": "Es",
             "primera": "Primera",
             "emision": "Emisión",

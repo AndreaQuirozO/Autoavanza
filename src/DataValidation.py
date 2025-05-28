@@ -134,9 +134,12 @@ class DataValidator:
             if nombre_solicitante_ine == nombre_solicitante_tarjeta_circ:
                 return True, 'Nombre del solicitante coincide con Factura, INE y Tarjeta de Circulación'
             else:
-                return False, 'Sin coincidencia en nombre del solicitante entre Factura, INE y Tarjeta de Circulación'
+                return False, f"Sin coincidencia en nombre del solicitante entre INE y Tarjeta de Circulación.\n\n**{self.datos_tarjeta['Nombre del solicitante']}** → Nombre en Tarjeta de Circulación\n\n**{self.datos_ine['Nombre del solicitante']}** → Nombre en INE"
         else:
-            return False, 'Trámite rechazado por discrepancia en nombre del solicitante'
+            if nombre_solicitante_factura != nombre_solicitante_ine:
+                return False, f"Trámite rechazado por discrepancia en nombre del solicitante.\n\n**{self.datos_factura['Nombre del solicitante']}** → Nombre en Factura\n\n**{self.datos_ine['Nombre del solicitante']}** → Nombre en INE"
+            if nombre_solicitante_factura_reverso != nombre_solicitante_ine:
+                return False, f"Trámite rechazado por discrepancia en nombre del solicitante.\n\n**{self.datos_factura_reverso['Nombre del solicitante']}** → Nombre en Reverso de Factura\n\n**{self.datos_ine['Nombre del solicitante']}** → Nombre en INE"
         
     
     # Factura 2.
@@ -152,7 +155,7 @@ class DataValidator:
         if self.datos_factura['NIV'] == self.datos_tarjeta['NIV']:
             return True, 'NIV coincide en Factura con Tarjeta de Circulación'
         else:
-            return False, 'Trámite rechazado por discrepancia en NIV' 
+            return False, f"Trámite rechazado por discrepancia en **NIV**.\n\n**{self.datos_factura['NIV']}** → NIV Factura\n\n**{self.datos_tarjeta['NIV']}** → NIV Tarjeta de Circulación"
 
     # Factura 3.
     def validar_datos_vehiculo(self):
@@ -175,15 +178,15 @@ class DataValidator:
 
         for campo, mensaje in campos.items():
             if self.datos_factura.get(campo) != self.datos_tarjeta.get(campo):
-                discrepancias[campo] = f"{mensaje}: {self.datos_factura.get(campo)} es distinto a {self.datos_tarjeta.get(campo)}"
+                discrepancias[campo] = f"{mensaje}:\n\n**{self.datos_factura.get(campo)}** → {campo} Factura\n\n**{self.datos_tarjeta.get(campo)}** → {campo} Tarjeta de Circulación"
 
         if discrepancias:
             return False, {"Estado": "Se solicita ajuste en factura", "detalles": discrepancias}
         return True, {"Estado": "Datos de vehículo coinciden en Factura y Tarjeta de Circulación"}
 
     # No entiendo bien que se compara aquí
-    # Factura 5.
-    def validar_RFC(self):
+    # Factura 5.1
+    def validar_RFC_SAT(self):
         """
         Validate the RFC (Federal Taxpayer Registry) field.
         (Implementation detail not provided.)
@@ -193,9 +196,29 @@ class DataValidator:
             str: Placeholder validation message.
         """
         if self.datos_factura['RFC Receptor'] == self.datos_factura_SAT['RFC Receptor']:
-            return True, 'RFC coincide'
+            return True, 'RFC coincide en la Factura y el SAT'
         else:
-            return False, 'RFC receptor no coincide en la Factura y el SAT'
+            return False, 'RFC receptor no coincide en la Factura y el SAT. RFC receptor en Factura: {}, RFC receptor en SAT: {}'.format(self.datos_factura['RFC Receptor'], self.datos_factura_SAT['RFC Receptor'])
+            
+    #Factura 5.2
+    def validar_RFC_generado(self):
+        """
+        Validate the RFC (Federal Taxpayer Registry) field.
+        (Implementation detail not provided.)
+
+        Returns:
+            bool: True if names match, False otherwise.
+            str: Placeholder validation message.
+        """
+        fecha_nac = self.datos_ine['Fecha de nacimiento'].split('/')
+        resultado_fecha_nac = fecha_nac[2][-2:] + fecha_nac[1] + fecha_nac[0]
+        rfc_formed = self.datos_ine['Nombre del solicitante'][:2] + self.datos_ine['Nombre del solicitante'].split()[1][:1] + self.datos_ine['Nombre del solicitante'].split()[2][:1] + resultado_fecha_nac
+
+        if self.datos_factura['RFC Receptor'].startswith(rfc_formed):
+            return True, 'RFC coincide con el RFC formado a partir del nombre del solicitante'
+        else:
+            return False, f"RFC receptor no coincide con el RFC formado a partir del nombre del solicitante. \n\n**{self.datos_factura['RFC Receptor']}** → RFC Receptor en Factura\n\n**{rfc_formed}** → RFC Receptor Formado"
+
 
     # Factura 6.
     def validar_es_primera_emision(self):
@@ -219,7 +242,7 @@ class DataValidator:
         if words:
             return True, "Es la primera emisión"
         else:
-            return False, "No es la primera emisión. Solicitar facturas anteriores"
+            return False, "No es la primera emisión. Solicitar facturas anteriores."
         
     # Factura 7.# Factura 7. 
     def validar_datos_SAT(self):
@@ -254,19 +277,19 @@ class DataValidator:
                                 if self.datos_factura['Folio Fiscal'] == self.datos_factura_SAT['Folio Fiscal']:
                                     return True, 'Trámite aceptado, datos de Factura coinciden con datos del SAT'
                                 else:
-                                    return False, 'Trámite rechazado por discrepancia en folio fiscal'
+                                    return False, 'Trámite rechazado por discrepancia en folio fiscal.\n\n**{}** → Folio Fiscal en Factura\n\n**{}** → Folio Fiscal en SAT'.format(self.datos_factura['Folio Fiscal'], self.datos_factura_SAT['Folio Fiscal'])
                             else:
-                                return False, 'Trámite rechazado por discrepancia en fecha de expedición'
+                                return False, 'Trámite rechazado por discrepancia en fecha de expedición.\n\n**{}** → Fecha de Expedición en Factura\n\n**{}** → Fecha de Expedición en SAT'.format(fecha_expedicion_factura_str, fecha_expedicion_SAT_str)
                         else:
-                            return False, 'Trámite rechazado por discrepancia en fecha de certificación'
+                            return False, 'Trámite rechazado por discrepancia en fecha de certificación.\n\n**{}** → Fecha de Certificación en Factura\n\n**{}** → Fecha de Certificación en SAT'.format(fecha_certificacion_factura_str, fecha_certificacion_SAT_str)
                     else:
-                        return False, 'Trámite rechazado por discrepancia en RFC emisor'
+                        return False, 'Trámite rechazado por discrepancia en RFC emisor.\n\n**{}** → RFC Emisor en Factura\n\n**{}** → RFC Emisor en SAT'.format(self.datos_factura['RFC Emisor'], self.datos_factura_SAT['RFC Emisor'])
                 else:
-                    return False, 'Trámite rechazado por discrepancia en RFC receptor'
+                    return False, 'Trámite rechazado por discrepancia en RFC receptor.\n\n**{}** → RFC Receptor en Factura\n\n**{}** → RFC Receptor en SAT'.format(self.datos_factura['RFC Receptor'], self.datos_factura_SAT['RFC Receptor'])
             else:
-                return False, 'Trámite rechazado por discrepancia en nombre del emisor'
+                return False, 'Trámite rechazado por discrepancia en nombre del emisor.\n\n**{}** → Nombre Emisor en Factura\n\n**{}** → Nombre Emisor en SAT'.format(self.datos_factura['Nombre Emisor'], self.datos_factura_SAT['Nombre Emisor'])
         else:
-            return False, 'Trámite rechazado por discrepancia en el nombre del solicitante en la Factura y el SAT'
+            return False, 'Trámite rechazado por discrepancia en el nombre del solicitante en la Factura y el SAT. \n\n**{}** → Nombre del solicitante en Factura\n\n**{}** → Nombre del solicitante en SAT'.format(self.datos_factura['Nombre del solicitante'], self.datos_factura_SAT['Nombre Receptor'])
         
         
     # Factura 9.
@@ -283,7 +306,7 @@ class DataValidator:
         else:
             if self.datos_factura['Número de motor'][-len(self.datos_tarjeta['Número de motor']):] == self.datos_tarjeta['Número de motor']:
                 return True, 'Número de motor coincide en Factura y Tarjeta de Circulación'
-            return False, 'No hay coincidencia en número de motor'
+            return False, 'No hay coincidencia en número de motor. \n\n**{}** → Número de motor en Factura\n\n**{}** → Número de motor en Tarjeta de Circulación'.format(self.datos_factura['Número de motor'], self.datos_tarjeta['Número de motor'])
 
     # Factura 11.
     def validar_endoso(self):
@@ -402,7 +425,7 @@ class DataValidator:
         #     return 'Se penaliza el monto de la infracción'
         # if adeudos == True:
         #     return 'Se penaliza penaliza 3% por tenencia que no esté'
-        return True, 'Sin adeudos en tarjeta de circulación'
+        return False, f"Recuerde validar adeudos en el siguiente link: https://www2.repuve.gob.mx:8443/ciudadania/. Ingrese el NIV: {self.datos_factura['NIV']}"
     
 
     def data_validator_pipeline(self):
@@ -426,7 +449,8 @@ class DataValidator:
         validacion_nombre_bool, validacion_nombre_message = self.validar_nombre_solicitante()
         validacion_niv_bool, validacion_niv_message = self.validar_niv()
         validacion_datos_vehiculo_bool, validacion_datos_vehiculo_message = self.validar_datos_vehiculo()
-        validacion_RFC_bool, validacion_RFC_message = self.validar_RFC()
+        validacion_RFC_SAT_bool, validacion_RFC_SAT_message = self.validar_RFC_SAT()
+        validacion_RFC_generado_bool, validacion_RFC_generado_message = self.validar_RFC_generado()
         validacion_es_primera_emision_bool, validacion_es_primera_emision_message = self.validar_es_primera_emision()
         validacion_datos_SAT_bool, validacion_datos_SAT_message = self.validar_datos_SAT()
         validacion_no_motor_bool, validacion_no_motor_message = self.validar_no_motor()
@@ -441,7 +465,8 @@ class DataValidator:
             "validacion_nombre": validacion_nombre_bool,
             "validacion_niv": validacion_niv_bool,
             "validacion_datos_vehiculo": validacion_datos_vehiculo_bool,
-            "validacion_RFC": validacion_RFC_bool,
+            "validacion_RFC_SAT": validacion_RFC_SAT_bool,
+            "validacion_RFC_generado": validacion_RFC_generado_bool,
             "validacion_es_primera_emision": validacion_es_primera_emision_bool,
             "validacion_datos_SAT": validacion_datos_SAT_bool,
             "validacion_no_motor": validacion_no_motor_bool,
@@ -457,7 +482,8 @@ class DataValidator:
             "validacion_nombre": validacion_nombre_message,
             "validacion_niv": validacion_niv_message,
             "validacion_datos_vehiculo": validacion_datos_vehiculo_message,
-            "validacion_RFC": validacion_RFC_message,
+            "validacion_RFC_SAT": validacion_RFC_SAT_message,
+            "validacion_RFC_generado": validacion_RFC_generado_message,
             "validacion_es_primera_emision": validacion_es_primera_emision_message,
             "validacion_datos_SAT": validacion_datos_SAT_message,
             "validacion_no_motor": validacion_no_motor_message,
