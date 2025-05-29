@@ -2,11 +2,19 @@
 
 ![image](https://github.com/user-attachments/assets/fe1b2b95-cbdb-4cea-bc8d-aa180b12f394)
 
-
-
 **Autoavanza** es una aplicación desarrollada con **Streamlit** que automatiza la extracción, clasificación y validación de documentos vehiculares y de identificación oficial en México. Está diseñada para optimizar procesos como el **empeño de vehículos**, garantizando que los documentos presentados cumplan con las normativas mediante procesamiento inteligente y validación automatizada.
 
-## 📌 Etapas del sistema
+---
+
+## 🧠 Objetivos del sistema
+
+* Lograr al menos un **80% de precisión** en la extracción, clasificación y validación de documentos.
+* Reducir el **tiempo de revisión de documentos de 2 horas a menos de 15 minutos**.
+* Generar un **dictamen claro y preciso** en lenguaje natural en al menos el 80% de los casos.
+
+---
+
+## 📌 Módulos del sistema
 
 El sistema está compuesto por los siguientes módulos principales:
 
@@ -34,34 +42,111 @@ El sistema está compuesto por los siguientes módulos principales:
 8. **Certamen**  
    Genera un dictamen final del proceso de validación, útil para decidir la aceptación o rechazo del trámite de empeño.
 
+---
+
+## 🚀 Resultados
+
+### 📄 Clasificación de documentos
+
+| Documento                         | Precisión |
+| --------------------------------- | --------- |
+| Factura                           | 100%      |
+| Reverso de Factura                | 80%       |
+| INE                               | 100%      |
+| Reverso de INE                    | 90%       |
+| Tarjeta de Circulación            | 100%      |
+| Reverso de Tarjeta de Circulación | 50%       |
+| **Precisión general:**            | **92.3%** |
+
+### 🧾 Extracción de datos
+
+* Porcentaje de extracción: **91.7%**
+* Precisión de valores extraídos: **87.6%**
+
+### ✅ Validación de datos
+
+* Controles completados: **94.4%**
+* Precisión con valores correctos: **100%**
+* Precisión con valores faltantes: **70.6%**
+
+### 🕒 Eficiencia del proceso
+
+* Tiempo antes: **2 horas**
+* Tiempo con Autoavanza: **15 minutos**
+* **Reducción del 87.5%**
+
+---
+
+## 🛠️ Tecnologías clave
+
+* **Python:** Lenguaje principal del sistema.
+* **Gemini API:** LLM usado para extracción de datos flexibles.
+* **GitHub:** Control de versiones y colaboración.
+* **Streamlit:** Framework para desarrollo de la interfaz interactiva.
+
+---
 
 ## 📁 Estructura del proyecto
 
+```plaintext
+Autoavanza/
+├── README.md
+├── assets/
+│   ├── img/
+│   │   └── logo.png              # Logo del proyecto con Monte de Piedad
+│   └── videos/
+│       └── DemoAutoavanza.mov    # Video demostrativo del funcionamiento
+├── data/                         # Casos de prueba en formato .zip
+├── src/                          # Módulos de procesamiento y validación
+│   ├── DataExtraction.py         # Extracción de datos desde el texto OCR
+│   ├── DataValidation.py         # Validación de datos extraídos según reglas del negocio
+│   ├── DocumentClassification.py # Clasificación automática de documentos
+│   ├── OCR.py                    # Módulo de OCR (Reconocimiento óptico de caracteres)
+│   ├── QRExctraction.py          # Detección y extracción de QR + scraping SAT
+│   ├── Ruling.py                 # Generación del dictamen automatizado
+│   ├── SignatureComparison.py    # Comparación automática de firmas
+│   ├── SignatureStampValidation.py # Validación de firmas y sellos
+│   ├── Staging.py                # Almacenamiento y procesamiento intermedio
+│   ├── autoavanza.py             # Script principal para ejecutar el flujo en Streamlit
+│   └── models/
+│       └── best.pt               # Modelo entrenado (por ejemplo, para detección de firmas)
+└── temp/                         # Archivos temporales procesados
+    ├── archivos/                 # Documentos decomprimidos
+    ├── captchas/                 # Captchas del SAT
+    └── signatures/               # Firmas extraídas desde los documentos
+
 ```
-Autoavanza                  
-├── .gitignore              
-├── README.md               
-├── assets                  
-│   └── img
-│       └── logo.png        # Logo for proyect with Monte de Piedad
-├── data                    # Sample input data or test cases for processing
-│   ├── Caso 12.zip         # Compressed folder with documents for case 12
-│   └── Caso 6.zip          # Compressed folder with documents for case 6
-├── src                     
-│   ├── DataExtraction.py           # Extracts key information from OCR output
-│   ├── DocumentClassification.py   # Classifies documents based on extracted text
-│   ├── OCR.py                      # Module to perform OCR (Optical Character Recognition) on documents
-│   ├── QRExctraction.py            # Detects and decodes QR codes from images
-│   ├── Staging.py                  # Handles intermediate storage or data preprocessing
-│   └── autoavanza.py               # Main script to run the full pipeline using streamlit
-└── temp                            # Temporary folder used to store processed files and intermediate outputs
-    ├── archivos                    # Decompressed and organized documents for a specific case
-    │   └── Caso 12
-    │       ├── TK 61417-1_FACTURA.pdf                     # Vehicle invoice (front)
-    │       ├── TK 61417-2_FACTURA REVERSO.pdf             # Vehicle invoice (back)
-    │       ├── TK 61417-3_INE.pdf                         # INE (voter ID) front side
-    │       ├── TK 61417-4_INE REVERSO.pdf                 # INE back side
-    │       ├── TK 61417-5_TARJETA CIRCULACION.pdf         # Circulation card front side
-    │       └── TK 61417-6_TARJETA CIRCULACION REVERSO.pdf # Circulation card back side
-    └── captchas
-        └── captcha.png     # CAPTCHA image to validate document authenticity with external services
+
+---
+
+## ⚠️ Restricciones y recomendaciones
+
+* **Formato:** los documentos deben subirse en un archivo `.zip`.
+* **Contenido mínimo:** Factura, INE, Tarjeta de Circulación.
+* **Orientación:** Los documentos deben estar en orientación vertical.
+* **Intervención manual:** en caso de fallas en clasificación, extracción o firmas.
+
+---
+
+## 🔄 Áreas de mejora
+
+* Validar la comparación de firmas con más datos para uso en producción.
+* Definir un índice de confianza robusto para aceptación/rechazo automático.
+* Mejorar la detección de fechas y validación de vigencias.
+* Incluir verificación de **adeudos (Repuve y Transunion)** y **sellos fiscales**.
+* Optimizar la interfaz con un framework más fluido.
+
+---
+
+## 🔮 Siguientes pasos
+
+* **Escalar validación** con una muestra más amplia para robustecer el modelo de firmas.
+* **Diseñar un índice de confianza** para decisiones automáticas.
+* **Incorporar nuevas reglas** y controles de validación adicionales.
+
+---
+
+## 🎥 Demostración
+
+
+
