@@ -585,7 +585,7 @@ if uploaded_file is not None:
                             if 'aprobado_firmas_sellos' not in st.session_state:
                                 st.session_state.aprobado_firmas_sellos = False
                             
-                            if st.button("✅ Apruebo validación de firmas, continuar con certamen"):
+                            if st.button("✅ Apruebo validación de firmas, continuar con dictamen"):
                                 st.session_state.aprobado_firmas_sellos = True
 
                             if st.session_state.aprobado_firmas_sellos:
@@ -598,7 +598,7 @@ if uploaded_file is not None:
 
                                 pdf_path = ruler.generar_pdf_dictamen()
 
-                                st.markdown("## Dictámen")
+                                st.markdown("## Dictamen")
 
                                 df_total = ruler.return_table_dictamen()
                                 st.dataframe(df_total, use_container_width=True, hide_index=True, row_height=70)
