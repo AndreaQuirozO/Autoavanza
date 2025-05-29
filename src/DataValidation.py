@@ -115,7 +115,7 @@ class DataValidator:
         return list(map(int, re.findall(r'\d+', text)))
     
 
-    # Factura 1.
+    # Factura 1., INE 1., TARJETA 1.
     def validar_nombre_solicitante(self):
         """
         Validate that the applicant's name matches across invoice, reverse invoice,
@@ -244,7 +244,7 @@ class DataValidator:
         else:
             return False, "No es la primera emisión. Solicitar facturas anteriores."
         
-    # Factura 7.# Factura 7. 
+    # Factura 7.
     def validar_datos_SAT(self):
         """
         Validate consistency between invoice data and SAT data.
