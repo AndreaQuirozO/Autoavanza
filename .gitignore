@@ -16,4 +16,4 @@ temp/archivos/__MACOSX/
 # Ignore confidential files
 .env
 
-temp/
+temp/assets/videos/DemoAutoavanza.mov
