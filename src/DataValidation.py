@@ -2,6 +2,7 @@ import re
 from dateutil import parser
 from datetime import datetime
 from dateutil.relativedelta import relativedelta
+from dateutil.parser import parse
 
 class DataValidator:
     """
@@ -16,7 +17,7 @@ class DataValidator:
         datos_tarjeta (dict): Vehicle registration card data.
     """
 
-    def __init__(self, datos_factura, datos_factura_SAT, datos_factura_reverso, datos_ine, datos_tarjeta):
+    def __init__(self, datos_factura=None, datos_factura_SAT=None, datos_factura_reverso=None, datos_ine=None, datos_tarjeta=None):
         """
         Initialize the DataValidator with relevant datasets.
 
@@ -116,7 +117,7 @@ class DataValidator:
     
 
     # Factura 1., INE 1., TARJETA 1.
-    def validar_nombre_solicitante(self):
+    def validar_nombre_solicitante(self, reverso=True):
         """
         Validate that the applicant's name matches across invoice, reverse invoice,
         voter ID, and vehicle registration card.
@@ -126,7 +127,10 @@ class DataValidator:
             str: Validation message indicating match or discrepancy.
         """
         nombre_solicitante_factura = self.normalizar_nombre(self.datos_factura['Nombre del solicitante'])
-        nombre_solicitante_factura_reverso = self.normalizar_nombre(self.datos_factura_reverso['Nombre del nuevo dueño'])
+        if reverso:
+            nombre_solicitante_factura_reverso = self.normalizar_nombre(self.datos_factura_reverso['Nombre del nuevo dueño'])
+        else:
+            nombre_solicitante_factura_reverso = None
         nombre_solicitante_ine = self.normalizar_nombre(self.datos_ine['Nombre del solicitante'])
         nombre_solicitante_tarjeta_circ = self.normalizar_nombre(self.datos_tarjeta['Nombre del solicitante'])
         
@@ -198,7 +202,7 @@ class DataValidator:
         if self.datos_factura['RFC Receptor'] == self.datos_factura_SAT['RFC Receptor']:
             return True, 'RFC coincide en la Factura y el SAT'
         else:
-            return False, 'RFC receptor no coincide en la Factura y el SAT. RFC receptor en Factura: {}, RFC receptor en SAT: {}'.format(self.datos_factura['RFC Receptor'], self.datos_factura_SAT['RFC Receptor'])
+            return False, 'RFC receptor no coincide en la Factura y el SAT. \n\n**{}** → RFC Receptor en Factura\n\n**{}** → RFC Receptor en SAT'.format(self.datos_factura['RFC Receptor'], self.datos_factura_SAT['RFC Receptor'])
             
     #Factura 5.2
     def validar_RFC_generado(self):
@@ -309,7 +313,7 @@ class DataValidator:
             return False, 'No hay coincidencia en número de motor. \n\n**{}** → Número de motor en Factura\n\n**{}** → Número de motor en Tarjeta de Circulación'.format(self.datos_factura['Número de motor'], self.datos_tarjeta['Número de motor'])
 
     # Factura 11.
-    def validar_endoso(self):
+    def validar_endoso(self, reverso=True):
         """
         Validate the endorsement by comparing applicant names in invoice,
         reverse invoice, and voter ID.
@@ -319,7 +323,10 @@ class DataValidator:
             str: Message indicating endorsement status.
         """
         nombre_solicitante_factura = self.normalizar_nombre(self.datos_factura['Nombre del solicitante'])
-        nombre_solicitante_factura_reverso = self.normalizar_nombre(self.datos_factura_reverso['Nombre del nuevo dueño'])
+        if reverso:
+            nombre_solicitante_factura_reverso = self.normalizar_nombre(self.datos_factura_reverso['Nombre del nuevo dueño'])
+        else:
+            nombre_solicitante_factura_reverso = None
         nombre_solicitante_ine = self.normalizar_nombre(self.datos_ine['Nombre del solicitante'])
 
         if nombre_solicitante_factura == nombre_solicitante_ine:
@@ -365,7 +372,10 @@ class DataValidator:
             return True, 'Tarjeta de Circulación vigente'
         if self.datos_tarjeta['Tipo de fecha de vigencia'] == 'periodo':
             periodo = self.extract_integers(self.datos_tarjeta['Valor de fecha de vigencia'])
-            fecha_dt = datetime.strptime(self.datos_tarjeta['Fecha de expedición'], '%Y-%m-%d')
+            try:
+                fecha_dt = datetime.strptime(self.datos_tarjeta['Fecha de expedición'], '%Y-%m-%d')
+            except:
+                fecha_dt = parse(self.datos_tarjeta['Fecha de expedición'], dayfirst=True, fuzzy=False)
             nueva_fecha = fecha_dt + relativedelta(years=periodo)
             if nueva_fecha > datetime.datetime.now():
                 return True, 'Tarjeta de Circulación vigente'
@@ -446,7 +456,12 @@ class DataValidator:
             dict: A dictionary mapping validation step names to their respective
                 result messages.
         """
-        validacion_nombre_bool, validacion_nombre_message = self.validar_nombre_solicitante()
+        if self.datos_factura_reverso is not None:
+            validacion_nombre_bool, validacion_nombre_message = self.validar_nombre_solicitante()
+            validacion_endoso_bool, validacion_endoso_message = self.validar_endoso()
+        else:
+            validacion_nombre_bool, validacion_nombre_message = self.validar_nombre_solicitante(reverso=False)  
+            validacion_endoso_bool, validacion_endoso_message = self.validar_endoso(reverso=False)
         validacion_niv_bool, validacion_niv_message = self.validar_niv()
         validacion_datos_vehiculo_bool, validacion_datos_vehiculo_message = self.validar_datos_vehiculo()
         validacion_RFC_SAT_bool, validacion_RFC_SAT_message = self.validar_RFC_SAT()
@@ -454,7 +469,6 @@ class DataValidator:
         validacion_es_primera_emision_bool, validacion_es_primera_emision_message = self.validar_es_primera_emision()
         validacion_datos_SAT_bool, validacion_datos_SAT_message = self.validar_datos_SAT()
         validacion_no_motor_bool, validacion_no_motor_message = self.validar_no_motor()
-        validacion_endoso_bool, validacion_endoso_message = self.validar_endoso()
         validacion_vigencia_INE_bool, validacion_vigencia_INE_message = self.validar_vigencia_INE()
         validacion_vigencia_tarjeta_bool, validacion_vigencia_tarjeta_message = self.validar_vigencia_tarjeta()
         validacion_uso_vehiculo_bool, validacion_uso_vehiculo_message = self.valdiar_uso_vehiculo()
