@@ -149,9 +149,6 @@ Autoavanza/
 
 [Click here to watch the demo video](https://drive.google.com/file/d/1H7PF9Pwwyy-iesxNpx3tVy8nX80MXdGj/view?usp=sharing)
 
----
-
-Do you want me to make this README sound **more professional (like for GitHub showcase)** or just a **literal translation**?
 
 ----
 
