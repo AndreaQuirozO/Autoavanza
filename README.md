@@ -147,7 +147,7 @@ Autoavanza/
 
 ## 🎥 System Demo
 
-[Click here to watch the demo video](https://drive.google.com/file/d/15qfzfWAubFuh77JC4_LL6NKktIxQcv8P/view?usp=sharing
+[Click here to watch the demo video](https://drive.google.com/file/d/15qfzfWAubFuh77JC4_LL6NKktIxQcv8P/view?usp=sharing)
 
 
 
